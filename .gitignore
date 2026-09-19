@@ -1,41 +1,35 @@
-# Learn more https://docs.github.com/en/get-started/getting-started-with-git/ignoring-files
+# React Native mobile client ignores
+mobile-app/node_modules/
+mobile-app/.expo/
+mobile-app/dist/
+mobile-app/web-build/
+mobile-app/expo-env.d.ts
+mobile-app/ios/
+mobile-app/android/.gradle/
+mobile-app/android/app/build/
+mobile-app/android/build/
+mobile-app/android/local.properties
+mobile-app/android/.idea/
+mobile-app/android/*.iml
+mobile-app/android/app/*.iml
+mobile-app/.env
+mobile-app/.env*.local
+mobile-app/*.tsbuildinfo
 
-# dependencies
-node_modules/
 
-# Expo
-.expo/
-dist/
-web-build/
-expo-env.d.ts
+# FastAPI middleware ignores
+middleware/venv/
+middleware/env/
+middleware/.venv/
+middleware/*.db
+middleware/.env
+middleware/astro_data/
+middleware/__pycache__/
+middleware/**/*.pyc
 
-# Native
-.kotlin/
-*.orig.*
-*.jks
-*.p8
-*.p12
-*.key
-*.mobileprovision
-
-# Metro
-.metro-health-check*
-
-# debug
+# OS / Generic ignores
+.DS_Store
+*.pem
 npm-debug.*
 yarn-debug.*
 yarn-error.*
-
-# macOS
-.DS_Store
-*.pem
-
-# local env files
-.env*.local
-
-# typescript
-*.tsbuildinfo
-
-# generated native folders
-/ios
-/android

@@ -1,0 +1,13 @@
+fastapi
+uvicorn[standard]
+pydantic
+pyswisseph
+geopy
+timezonefinder
+pytz
+requests
+python-multipart
+transformers
+torch
+firebase-admin
+python-dotenv
