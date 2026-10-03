@@ -153,3 +153,27 @@ export interface CompatibilityResponse {
   manglik_b: ManglikResult;
   ashta_koota: AshtaKootaResult;
 }
+
+export interface NumerologyNumbers {
+  life_path_number: number;
+  destiny_number: number;
+  soul_urge_number: number;
+  personality_number: number;
+  birthday_number: number;
+  maturity_number: number;
+}
+
+export interface NumerologySections {
+  life_path_meaning: string;
+  destiny_meaning: string;
+  soul_urge_meaning: string;
+  personality_meaning: string;
+  overall_synthesis: string;
+}
+
+export interface NumerologyData {
+  chart_id: string;
+  numbers: NumerologyNumbers;
+  sections: NumerologySections;
+  generated_at: string;
+}

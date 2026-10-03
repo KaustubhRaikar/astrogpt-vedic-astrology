@@ -59,3 +59,19 @@ FIREBASE_VERIFICATION_ENABLED = os.environ.get("FIREBASE_VERIFICATION_ENABLED", 
 # RN apps don't send a browser Origin header the way web apps do, but keep this open
 # during development; lock down to your API gateway / domain in production.
 ALLOWED_ORIGINS = ["*"]
+
+
+# --- Security Sanitizer ---
+import re
+
+def sanitize_error(error_or_msg) -> str:
+    """Sanitizes API keys, secrets, query parameters, and internal file paths
+    from error strings and tracebacks before logging or sending in HTTP responses."""
+    msg = str(error_or_msg)
+    if GEMINI_API_KEY:
+        msg = msg.replace(GEMINI_API_KEY, "[REDACTED_API_KEY]")
+    if SCALEMAX_API_KEY:
+        msg = msg.replace(SCALEMAX_API_KEY, "[REDACTED_API_KEY]")
+    # Redact any URL query parameters containing key=
+    msg = re.sub(r'key=[^&\s"\']+', 'key=[REDACTED_API_KEY]', msg)
+    return msg

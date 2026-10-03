@@ -38,6 +38,14 @@ CREATE TABLE IF NOT EXISTS reports (
     FOREIGN KEY(chart_id) REFERENCES charts(chart_id)
 );
 
+CREATE TABLE IF NOT EXISTS numerology (
+    chart_id TEXT PRIMARY KEY,
+    numbers_json TEXT NOT NULL,
+    sections_json TEXT NOT NULL,
+    generated_at TEXT NOT NULL,
+    FOREIGN KEY(chart_id) REFERENCES charts(chart_id)
+);
+
 CREATE TABLE IF NOT EXISTS chat_history (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     chart_id TEXT NOT NULL,
@@ -236,6 +244,35 @@ def get_report(chart_id: str) -> dict | None:
             "SELECT sections_json FROM reports WHERE chart_id = ?", (chart_id,)
         ).fetchone()
         return json.loads(row["sections_json"]) if row else None
+
+
+# ---------- Numerology (chart_id keyed) ----------
+
+def save_numerology(chart_id: str, numbers: dict, sections: dict):
+    from datetime import datetime, timezone
+    with get_conn() as conn:
+        conn.execute(
+            "INSERT INTO numerology (chart_id, numbers_json, sections_json, generated_at) VALUES (?, ?, ?, ?) "
+            "ON CONFLICT(chart_id) DO UPDATE SET numbers_json=excluded.numbers_json, "
+            "sections_json=excluded.sections_json, generated_at=excluded.generated_at",
+            (chart_id, json.dumps(numbers), json.dumps(sections), datetime.now(timezone.utc).isoformat()),
+        )
+
+
+def get_numerology(chart_id: str) -> dict | None:
+    with get_conn() as conn:
+        row = conn.execute(
+            "SELECT chart_id, numbers_json, sections_json, generated_at FROM numerology WHERE chart_id = ?",
+            (chart_id,),
+        ).fetchone()
+        if not row:
+            return None
+        return {
+            "chart_id": row["chart_id"],
+            "numbers": json.loads(row["numbers_json"]),
+            "sections": json.loads(row["sections_json"]),
+            "generated_at": row["generated_at"],
+        }
 
 
 # ---------- Chat history (chart_id keyed — one chat thread per chart) ----------

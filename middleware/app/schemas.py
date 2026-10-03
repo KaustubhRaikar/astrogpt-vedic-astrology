@@ -12,6 +12,7 @@ from datetime import datetime
 
 class ErrorResponse(BaseModel):
     error: str
+    code: Optional[str] = None
     detail: Optional[str] = None
     tokens_remaining: Optional[int] = None
 
@@ -194,3 +195,21 @@ class DivisionalChartOut(BaseModel):
     division: str  # "D9" | "D10"
     ascendant_sign: str
     planets: list[dict]
+
+
+# ---------- Numerology ----------
+
+class NumerologyNumbers(BaseModel):
+    life_path_number: int
+    destiny_number: int
+    soul_urge_number: int
+    personality_number: int
+    birthday_number: int
+    maturity_number: int
+
+
+class NumerologyOut(BaseModel):
+    chart_id: str
+    numbers: NumerologyNumbers
+    sections: dict
+    generated_at: str

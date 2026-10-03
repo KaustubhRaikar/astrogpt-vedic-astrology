@@ -68,7 +68,7 @@ def _call_scalemax(system_prompt: str, user_content: str, json_mode: bool = Fals
         data = resp.json()
         return data["choices"][0]["message"]["content"]
     except Exception as e:
-        print(f"ScaleMax report generation call failed: {e}")
+        print(f"ScaleMax report generation call failed: {config.sanitize_error(e)}")
         return None
 
 
@@ -91,7 +91,7 @@ def _call_gemini(system_prompt: str, user_content: str, json_mode: bool = False)
         data = resp.json()
         return data["candidates"][0]["content"]["parts"][0]["text"]
     except Exception as gemini_error:
-        print(f"Gemini report call failed ({gemini_error}). Attempting ScaleMax fallback...")
+        print(f"Gemini report call failed ({config.sanitize_error(gemini_error)}). Attempting ScaleMax fallback...")
         if config.SCALEMAX_API_KEY:
             scalemax_res = _call_scalemax(system_prompt, user_content, json_mode=json_mode)
             if scalemax_res:
@@ -235,5 +235,5 @@ def generate_report(chart: dict) -> dict:
 
         return mock_fallback_sections(chart)
     except Exception as e:
-        print(f"Gemini report generation rate limit or error ({e}). Using grounded fallback report.")
+        print(f"Gemini report generation rate limit or error ({config.sanitize_error(e)}). Using grounded fallback report.")
         return mock_fallback_sections(chart)

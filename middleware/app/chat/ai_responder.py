@@ -89,7 +89,7 @@ def call_gemini(system_prompt: str, user_message: str) -> str:
     try:
         resp = requests.post(url, json=payload, timeout=60)
         if not resp.ok:
-            error_summary = f"{resp.status_code}: {resp.text[:500]}"
+            error_summary = config.sanitize_error(f"{resp.status_code}: {resp.text[:500]}")
             print(f"Gemini API call failed — {error_summary}")
             provider_status.record_failure("gemini", error_summary)
 
@@ -100,16 +100,17 @@ def call_gemini(system_prompt: str, user_message: str) -> str:
                 from . import scalemax_client
                 return scalemax_client.call_scalemax(system_prompt, user_message)
             except Exception as fallback_error:
+                sanitized_fb = config.sanitize_error(fallback_error)
                 raise RuntimeError(
                     f"Both AI providers failed. Gemini: {error_summary}. "
-                    f"ScaleMax: {fallback_error}"
+                    f"ScaleMax: {sanitized_fb}"
                 ) from fallback_error
 
         provider_status.record_success("gemini")
         data = resp.json()
         return data["candidates"][0]["content"]["parts"][0]["text"]
     except Exception as gemini_exception:
-        error_summary = str(gemini_exception)
+        error_summary = config.sanitize_error(gemini_exception)
         print(f"Gemini API exception — {error_summary}")
         provider_status.record_failure("gemini", error_summary)
 
@@ -120,9 +121,10 @@ def call_gemini(system_prompt: str, user_message: str) -> str:
             from . import scalemax_client
             return scalemax_client.call_scalemax(system_prompt, user_message)
         except Exception as fallback_error:
+            sanitized_fb = config.sanitize_error(fallback_error)
             raise RuntimeError(
                 f"Both AI providers failed. Gemini: {error_summary}. "
-                f"ScaleMax: {fallback_error}"
+                f"ScaleMax: {sanitized_fb}"
             ) from fallback_error
 
 

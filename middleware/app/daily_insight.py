@@ -42,13 +42,13 @@ def _call_gemini(system_prompt: str, user_content: str) -> str:
         data = resp.json()
         return data["candidates"][0]["content"]["parts"][0]["text"]
     except Exception as gemini_err:
-        print(f"Gemini daily insight call failed ({gemini_err}). Attempting ScaleMax fallback...")
+        print(f"Gemini daily insight call failed ({config.sanitize_error(gemini_err)}). Attempting ScaleMax fallback...")
         if config.SCALEMAX_API_KEY:
             try:
                 from .chat import scalemax_client
                 return scalemax_client.call_scalemax(system_prompt, user_content)
             except Exception as sm_err:
-                print(f"ScaleMax daily insight fallback failed: {sm_err}")
+                print(f"ScaleMax daily insight fallback failed: {config.sanitize_error(sm_err)}")
         raise gemini_err
 
 
@@ -89,5 +89,5 @@ def generate_daily_insight(chart: dict) -> dict:
         card["transits_used"] = todays_transits
         return card
     except Exception as e:
-        print(f"Daily insight generation rate limit or error ({e}). Returning grounded fallback card.")
+        print(f"Daily insight generation rate limit or error ({config.sanitize_error(e)}). Returning grounded fallback card.")
         return mock_daily_fallback(chart)

@@ -40,7 +40,7 @@ def call_scalemax(system_prompt: str, user_message: str) -> str:
                 provider_status.record_success("scalemax")
                 return data["choices"][0]["message"]["content"]
     except Exception as err:
-        print(f"ScaleMax /messages call failed: {err}")
+        print(f"ScaleMax /messages call failed: {config.sanitize_error(err)}")
 
     # 2. Try OpenAI Chat Completions endpoint format on ScaleMax
     comp_url = f"{base_url}/chat/completions" if base_url.endswith('/v1') else f"{base_url}/v1/chat/completions"
@@ -60,7 +60,7 @@ def call_scalemax(system_prompt: str, user_message: str) -> str:
 
     resp = requests.post(comp_url, headers=headers_comp, json=payload_comp, timeout=60)
     if not resp.ok:
-        error_summary = f"{resp.status_code}: {resp.text[:500]}"
+        error_summary = config.sanitize_error(f"{resp.status_code}: {resp.text[:500]}")
         print(f"ScaleMax API call failed ({model}) — {error_summary}")
         provider_status.record_failure("scalemax", error_summary)
         resp.raise_for_status()

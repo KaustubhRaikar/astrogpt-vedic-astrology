@@ -1,4 +1,4 @@
-import { KundaliChart, BirthDetails, DivisionalChart, DailyInsight, CompatibilityResponse } from '../types';
+import { KundaliChart, BirthDetails, DivisionalChart, DailyInsight, CompatibilityResponse, NumerologyData } from '../types';
 import { apiClient } from '../client';
 
 const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
@@ -271,6 +271,48 @@ export const kundaliApi = {
         { chart_id: 'chart_1', name: 'Natal Chart (Self)', generated_at: new Date().toISOString() },
         { chart_id: 'chart_2', name: "Partner's Chart", generated_at: new Date().toISOString() },
       ];
+    }
+  },
+
+  generateNumerology: async (chartId: string): Promise<NumerologyData> => {
+    try {
+      const response = await apiClient.post(`/kundali/${chartId}/numerology/generate`);
+      return response.data;
+    } catch (error) {
+      console.warn(`Real POST /kundali/${chartId}/numerology/generate failed, using fallback`, error);
+      await delay(800);
+      return {
+        chart_id: chartId,
+        numbers: {
+          life_path_number: 7,
+          destiny_number: 5,
+          soul_urge_number: 3,
+          personality_number: 2,
+          birthday_number: 8,
+          maturity_number: 3,
+        },
+        sections: {
+          life_path_meaning: "Life Path 7 represents an analytical mind, spiritual seeker, and seeker of truth.",
+          destiny_meaning: "Destiny 5 brings adaptability, freedom, and dynamic life experiences.",
+          soul_urge_meaning: "Soul Urge 3 reflects a deep desire for creative self-expression and joy.",
+          personality_meaning: "Personality 2 shows a gentle, diplomatic, and approachable exterior.",
+          overall_synthesis: "Your numerology profile synthesizes analytical wisdom with a free-spirited drive for creative expression.",
+        },
+        generated_at: new Date().toISOString(),
+      };
+    }
+  },
+
+  getNumerology: async (chartId: string): Promise<NumerologyData | null> => {
+    try {
+      const response = await apiClient.get(`/kundali/${chartId}/numerology`);
+      return response.data;
+    } catch (error: any) {
+      if (error?.response?.status === 404) {
+        return null;
+      }
+      console.warn(`Real GET /kundali/${chartId}/numerology failed, falling back to null`, error);
+      return null;
     }
   }
 };
