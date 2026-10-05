@@ -1,4 +1,4 @@
-import { KundaliChart, BirthDetails, DivisionalChart, DailyInsight, CompatibilityResponse, NumerologyData } from '../types';
+import { KundaliChart, BirthDetails, DivisionalChart, DailyInsight, CompatibilityResponse, NumerologyData, ForecastResponse } from '../types';
 import { apiClient } from '../client';
 
 const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
@@ -314,5 +314,30 @@ export const kundaliApi = {
       console.warn(`Real GET /kundali/${chartId}/numerology failed, falling back to null`, error);
       return null;
     }
-  }
+  },
+
+  getForecast: async (chartId: string, period: 'week' | 'month' = 'week'): Promise<ForecastResponse> => {
+    try {
+      const response = await apiClient.post(`/kundali/${chartId}/forecast`, null, {
+        params: { period },
+      });
+      return response.data;
+    } catch (error: any) {
+      console.warn(`POST /kundali/${chartId}/forecast failed, using fallback forecast`, error);
+      await delay(600);
+      return {
+        chart_id: chartId,
+        period,
+        overview: period === 'week'
+          ? 'This week brings a phase of mental clarity and purposeful action. Key transits align to support strategic career moves and personal reflection.'
+          : 'The coming month emphasizes long-term growth, financial planning, and deepening relationship dynamics under favorable transit aspects.',
+        highlights: [
+          period === 'week' ? 'Moon transits activate your 10th house of ambition mid-week.' : 'Sun transit into your 9th house enhances fortune and wisdom.',
+          'Jupiter maintains strong protective aspect over your ascendant.',
+          'Favorable window for initiating new projects and key conversations.',
+        ],
+        caution: 'Avoid impulsive financial commitments during mid-period planetary shifts.',
+      };
+    }
+  },
 };

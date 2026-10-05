@@ -177,3 +177,60 @@ export interface NumerologyData {
   sections: NumerologySections;
   generated_at: string;
 }
+
+export interface TithiInfo {
+  number: number;
+  paksha: 'Shukla' | 'Krishna';
+  name: string;
+}
+
+export interface FestivalInfo {
+  name: string;
+  description: string;
+  significance: string;
+  muhurta_hint?: string;
+  category: string;
+}
+
+export interface PanchangData {
+  date: string; // YYYY-MM-DD
+  tithi: TithiInfo;
+  vara: string;
+  nakshatra: string;
+  nakshatra_pada: number;
+  yoga: string;
+  karana: string;
+  festival?: FestivalInfo;
+}
+
+export interface TimingWindow {
+  start: string; // ISO datetime
+  end: string;   // ISO datetime
+}
+
+export interface MuhurtaData {
+  date: string;
+  sunrise: string;
+  sunset: string;
+  rahu_kalam: TimingWindow;
+  yamaganda: TimingWindow;
+  abhijit_muhurta: TimingWindow;
+}
+
+export interface MonthPanchangData {
+  year: number;
+  month: number;
+  days: PanchangData[];
+}
+
+export interface ForecastResponse {
+  chart_id: string;
+  period: 'week' | 'month';
+  overview: string;
+  highlights: string[];
+  caution: string | null;
+  transits_at_start?: TransitInfo[];
+  transits_at_end?: TransitInfo[];
+}
+
+

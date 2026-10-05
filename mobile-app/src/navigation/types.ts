@@ -6,6 +6,7 @@ export type RootStackParamList = {
   Main: undefined;
   BirthDataForm: undefined;
   DocumentUpload: undefined;
+  Forecast: { initialPeriod?: 'week' | 'month' } | undefined;
   MockCheckout: { planId: string };
   PurchaseSuccess: { planId: string; tokensCredited: number };
   PurchaseFailure: { planId: string; errorMessage: string };
@@ -19,6 +20,7 @@ export type AuthStackParamList = {
 
 export type MainTabParamList = {
   DashboardTab: undefined;
+  CalendarTab: undefined;
   ReportTab: undefined;
   ChatTab: undefined;
   WalletTab: undefined;

@@ -6,6 +6,7 @@ import { useTheme } from '../../theme/ThemeProvider';
 import { useSessionStore } from '../../store/useSessionStore';
 import { useChartStore } from '../../store/useChartStore';
 import { authApi } from '../../api/endpoints/auth';
+import { notificationService } from '../../utils/notificationService';
 import Card from '../../components/Card';
 import Button from '../../components/Button';
 import TextInput from '../../components/TextInput';
@@ -19,6 +20,25 @@ export const SettingsScreen: React.FC = () => {
   const clearChartStore = useChartStore((state) => state.clearStore);
 
   const [language, setLanguage] = useState<string>('en');
+  const [weeklyNotif, setWeeklyNotif] = useState(false);
+  const [monthlyNotif, setMonthlyNotif] = useState(false);
+
+  React.useEffect(() => {
+    notificationService.getForecastNotificationSettings().then((res) => {
+      setWeeklyNotif(res.weeklyEnabled);
+      setMonthlyNotif(res.monthlyEnabled);
+    });
+  }, []);
+
+  const handleToggleWeekly = async (val: boolean) => {
+    setWeeklyNotif(val);
+    await notificationService.setWeeklyForecastNotification(val);
+  };
+
+  const handleToggleMonthly = async (val: boolean) => {
+    setMonthlyNotif(val);
+    await notificationService.setMonthlyForecastNotification(val);
+  };
 
   const languagesList = [
     { code: 'en', name: 'English' },
@@ -186,19 +206,70 @@ export const SettingsScreen: React.FC = () => {
 
           <View style={[styles.rowDivider, { backgroundColor: colors.border }]} />
 
-          {/* Notifications Toggle */}
+          {/* Daily Notifications Toggle */}
           <View style={styles.settingRow}>
             <View style={styles.settingLabelCol}>
               <Bell size={18} color={colors.accent} style={{ marginRight: 10 }} />
-              <Text style={[styles.settingLabel, { color: colors.textPrimary, fontSize: typography.sizes.md, fontFamily: typography.fonts.bodySemibold }]}>
-                Daily Transit Alerts
-              </Text>
+              <View>
+                <Text style={[styles.settingLabel, { color: colors.textPrimary, fontSize: typography.sizes.md, fontFamily: typography.fonts.bodySemibold }]}>
+                  Daily Transit Alerts
+                </Text>
+                <Text style={{ color: colors.textSecondary, fontSize: 11 }}>
+                  Daily celestial guidance morning notifications
+                </Text>
+              </View>
             </View>
             <Switch
               value={notifications}
               onValueChange={setNotifications}
               trackColor={{ false: colors.border, true: colors.accent }}
               thumbColor={Platform.OS === 'android' ? (notifications ? colors.surface : colors.surfaceElevated) : ''}
+            />
+          </View>
+
+          <View style={[styles.rowDivider, { backgroundColor: colors.border }]} />
+
+          {/* Weekly Forecast Notification Toggle */}
+          <View style={styles.settingRow}>
+            <View style={styles.settingLabelCol}>
+              <Calendar size={18} color={colors.accent} style={{ marginRight: 10 }} />
+              <View style={{ flex: 1, paddingRight: 8 }}>
+                <Text style={[styles.settingLabel, { color: colors.textPrimary, fontSize: typography.sizes.md, fontFamily: typography.fonts.bodySemibold }]}>
+                  Weekly Forecast Notification
+                </Text>
+                <Text style={{ color: colors.textSecondary, fontSize: 11 }}>
+                  Sunday 6:00 PM recurring prompt to view fresh weekly transits
+                </Text>
+              </View>
+            </View>
+            <Switch
+              value={weeklyNotif}
+              onValueChange={handleToggleWeekly}
+              trackColor={{ false: colors.border, true: colors.accent }}
+              thumbColor={Platform.OS === 'android' ? (weeklyNotif ? colors.surface : colors.surfaceElevated) : ''}
+            />
+          </View>
+
+          <View style={[styles.rowDivider, { backgroundColor: colors.border }]} />
+
+          {/* Monthly Forecast Notification Toggle */}
+          <View style={styles.settingRow}>
+            <View style={styles.settingLabelCol}>
+              <Sparkles size={18} color={colors.accent} style={{ marginRight: 10 }} />
+              <View style={{ flex: 1, paddingRight: 8 }}>
+                <Text style={[styles.settingLabel, { color: colors.textPrimary, fontSize: typography.sizes.md, fontFamily: typography.fonts.bodySemibold }]}>
+                  Monthly Forecast Notification
+                </Text>
+                <Text style={{ color: colors.textSecondary, fontSize: 11 }}>
+                  1st of month 8:00 AM recurring prompt to view monthly outlook
+                </Text>
+              </View>
+            </View>
+            <Switch
+              value={monthlyNotif}
+              onValueChange={handleToggleMonthly}
+              trackColor={{ false: colors.border, true: colors.accent }}
+              thumbColor={Platform.OS === 'android' ? (monthlyNotif ? colors.surface : colors.surfaceElevated) : ''}
             />
           </View>
         </Card>

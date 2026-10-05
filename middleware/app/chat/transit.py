@@ -1,32 +1,30 @@
 """
-Current planetary transit positions ("gochara") — deterministic, pyswisseph,
-NO AI involved, same discipline as chart_engine.py.
+Current (or future-dated) planetary transit positions ("gochara") —
+deterministic, pyswisseph, NO AI involved.
 
-This is genuinely different from chart_engine.py: chart_engine computes
-positions AT BIRTH (fixed forever once calculated); this computes positions
-RIGHT NOW (changes daily). Questions like "where is Rahu right now" need
-this, not the natal chart — which is exactly the gap that produced no
-answer before this module existed.
+SMALL EXTENSION for the weekly/monthly forecast feature: added an optional
+`target_date` parameter (defaults to now, exactly as before) so callers can
+ask "where will this planet be on this future date" instead of only "right
+now." Every existing call site that doesn't pass target_date behaves
+identically to before — this is additive, not a signature-breaking change.
 """
 import swisseph as swe
 from datetime import datetime, timezone
 from .. import chart_engine
 
 
-def get_current_transit(planet_name: str, natal_ascendant_sign_num: int) -> dict | None:
-    """planet_name: e.g. 'Rahu', 'Saturn'. natal_ascendant_sign_num: 0-11,
-    from the user's own natal chart — needed to express the transit as a
-    house relative to THEIR chart (Vedic transit analysis is always relative
-    to the natal ascendant, not an absolute house number)."""
+def get_current_transit(planet_name: str, natal_ascendant_sign_num: int,
+                         target_date: datetime | None = None) -> dict | None:
+    """planet_name: e.g. 'Rahu', 'Saturn'. natal_ascendant_sign_num: 0-11.
+    target_date: defaults to now (UTC) if not given — existing behavior
+    unchanged for any caller that doesn't pass this."""
     swe.set_sid_mode(swe.SIDM_LAHIRI)
-    now = datetime.now(timezone.utc)
+    now = target_date if target_date is not None else datetime.now(timezone.utc)
     jd_ut = swe.julday(now.year, now.month, now.day, now.hour + now.minute / 60)
 
     if planet_name == "Ketu":
-        # Same rule as chart_engine: Ketu is always exactly opposite Rahu
         rahu_pos, _ = swe.calc_ut(jd_ut, swe.MEAN_NODE, swe.FLG_SIDEREAL)
         longitude = (rahu_pos[0] + 180) % 360
-        speed = 0  # Ketu, like Rahu, is conventionally always treated as retrograde
         retrograde = True
     elif planet_name in chart_engine.PLANETS:
         pos, _ret = swe.calc_ut(jd_ut, chart_engine.PLANETS[planet_name],
@@ -44,7 +42,7 @@ def get_current_transit(planet_name: str, natal_ascendant_sign_num: int) -> dict
         "planet": planet_name,
         "sign": sign,
         "degree_in_sign": round(degree_in_sign, 2),
-        "house": house,  # relative to the user's own natal ascendant
+        "house": house,
         "nakshatra": nakshatra,
         "nakshatra_pada": pada,
         "retrograde": retrograde,

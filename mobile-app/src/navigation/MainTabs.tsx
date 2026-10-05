@@ -1,12 +1,13 @@
 import React from 'react';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { Platform } from 'react-native';
-import { Compass, FileText, MessageSquare, User, Coins } from 'lucide-react-native';
+import { Compass, FileText, MessageSquare, User, Coins, Calendar } from 'lucide-react-native';
 import { useTheme } from '../theme/ThemeProvider';
 import { MainTabParamList } from './types';
 
 // Screens
 import DashboardScreen from '../screens/home/DashboardScreen';
+import CalendarScreen from '../screens/calendar/CalendarScreen';
 import ReportScreen from '../screens/report/ReportScreen';
 import ChatScreen from '../screens/chat/ChatScreen';
 import WalletScreen from '../screens/wallet/WalletScreen';
@@ -54,6 +55,14 @@ export const MainTabs: React.FC = () => {
         options={{
           tabBarLabel: 'Dashboard',
           tabBarIcon: ({ color, size }) => <Compass size={size} color={color} />,
+        }}
+      />
+      <Tab.Screen
+        name="CalendarTab"
+        component={CalendarScreen}
+        options={{
+          tabBarLabel: 'Panchang',
+          tabBarIcon: ({ color, size }) => <Calendar size={size} color={color} />,
         }}
       />
       <Tab.Screen

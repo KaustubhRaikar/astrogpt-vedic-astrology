@@ -66,6 +66,17 @@ CREATE TABLE IF NOT EXISTS token_ledger (
     timestamp TEXT NOT NULL,
     FOREIGN KEY(user_id) REFERENCES users(user_id)
 );
+
+CREATE TABLE IF NOT EXISTS tarot_readings (
+    reading_id TEXT PRIMARY KEY,
+    chart_id TEXT NOT NULL,
+    cards_json TEXT NOT NULL,
+    question TEXT,
+    reading_text TEXT NOT NULL,
+    created_at TEXT NOT NULL,
+    FOREIGN KEY(chart_id) REFERENCES charts(chart_id)
+);
+CREATE INDEX IF NOT EXISTS idx_tarot_chart_id ON tarot_readings(chart_id);
 """
 
 
@@ -295,3 +306,36 @@ def get_recent_chat(chart_id: str, limit: int = 6) -> list[dict]:
             (chart_id, limit),
         ).fetchall()
         return [dict(r) for r in reversed(rows)]
+
+
+# ---------- Tarot Readings (chart_id keyed) ----------
+
+def save_tarot_reading(chart_id: str, cards: list[dict], question: str | None, reading_text: str) -> str:
+    from datetime import datetime, timezone
+    reading_id = str(uuid.uuid4())
+    with get_conn() as conn:
+        conn.execute(
+            "INSERT INTO tarot_readings (reading_id, chart_id, cards_json, question, reading_text, created_at) "
+            "VALUES (?, ?, ?, ?, ?, ?)",
+            (reading_id, chart_id, json.dumps(cards), question, reading_text, datetime.now(timezone.utc).isoformat()),
+        )
+    return reading_id
+
+
+def list_tarot_readings(chart_id: str) -> list[dict]:
+    with get_conn() as conn:
+        rows = conn.execute(
+            "SELECT reading_id, chart_id, cards_json, question, reading_text, created_at FROM tarot_readings "
+            "WHERE chart_id = ? ORDER BY created_at DESC",
+            (chart_id,),
+        ).fetchall()
+        out = []
+        for r in rows:
+            out.append({
+                "reading_id": r["reading_id"],
+                "cards": json.loads(r["cards_json"]),
+                "question": r["question"],
+                "reading": r["reading_text"],
+                "created_at": r["created_at"],
+            })
+        return out

@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { StyleSheet, Text, View, ScrollView, Pressable, RefreshControl, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Sparkles, Calendar, MapPin, MessageSquare, FileText, Plus, UploadCloud, Compass, ArrowRight, AlertCircle, ShieldCheck, Heart } from 'lucide-react-native';
+import { Sparkles, Calendar, MapPin, MessageSquare, FileText, Plus, UploadCloud, Compass, ArrowRight, AlertCircle, ShieldCheck, Heart, Orbit } from 'lucide-react-native';
 import { useTheme } from '../../theme/ThemeProvider';
 import { useSessionStore } from '../../store/useSessionStore';
 import { useTokenStore } from '../../store/useTokenStore';
@@ -235,6 +235,54 @@ export const DashboardScreen: React.FC = () => {
                 <Button
                   title="Match"
                   onPress={() => setShowCompatibilityModal(true)}
+                  style={{ paddingHorizontal: 14, paddingVertical: 6 }}
+                />
+              </View>
+            </Card>
+
+            {/* Panchang & Festival Calendar Shortcut Card */}
+            <Card variant="glow" style={[styles.dashaCard, { borderColor: colors.accent }]}>
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
+                  <View style={[styles.iconCircle, { backgroundColor: 'rgba(212, 175, 55, 0.15)', marginRight: 12 }]}>
+                    <Calendar size={22} color={colors.accent} />
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Text style={{ color: colors.textPrimary, fontSize: typography.sizes.sm, fontFamily: typography.fonts.heading }}>
+                      Vedic Panchang & Festival Calendar
+                    </Text>
+                    <Text style={{ color: colors.textSecondary, fontSize: 11, marginTop: 2 }}>
+                      Daily Tithi, Vara, Nakshatra, Muhurta & 1-Click Notifications.
+                    </Text>
+                  </View>
+                </View>
+                <Button
+                  title="View"
+                  onPress={() => navigation.navigate('CalendarTab')}
+                  style={{ paddingHorizontal: 16, paddingVertical: 6 }}
+                />
+              </View>
+            </Card>
+
+            {/* Weekly/Monthly Forecast Shortcut Card */}
+            <Card variant="glow" style={[styles.dashaCard, { borderColor: colors.accent }]}>
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
+                  <View style={[styles.iconCircle, { backgroundColor: 'rgba(99, 102, 241, 0.15)', marginRight: 12 }]}>
+                    <Orbit size={22} color="#6366F1" />
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Text style={{ color: colors.textPrimary, fontSize: typography.sizes.sm, fontFamily: typography.fonts.heading }}>
+                      Weekly & Monthly Forecasts
+                    </Text>
+                    <Text style={{ color: colors.textSecondary, fontSize: 11, marginTop: 2 }}>
+                      Real planetary start/end transits, highlights & caution synthesis.
+                    </Text>
+                  </View>
+                </View>
+                <Button
+                  title="Forecast"
+                  onPress={() => navigation.navigate('Forecast')}
                   style={{ paddingHorizontal: 14, paddingVertical: 6 }}
                 />
               </View>

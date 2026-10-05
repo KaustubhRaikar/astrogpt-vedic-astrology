@@ -213,3 +213,152 @@ class NumerologyOut(BaseModel):
     numbers: NumerologyNumbers
     sections: dict
     generated_at: str
+
+
+# ---------- Panchang & Muhurta ----------
+
+class TithiOut(BaseModel):
+    number: int
+    paksha: str
+    name: str
+
+
+class FestivalOut(BaseModel):
+    name: str
+    description: str
+    significance: str
+    muhurta_hint: Optional[str] = None
+    category: str
+
+
+class PanchangOut(BaseModel):
+    date: str
+    tithi: TithiOut
+    vara: str
+    nakshatra: str
+    nakshatra_pada: int
+    yoga: str
+    karana: str
+    festival: Optional[FestivalOut] = None
+
+
+class TimingWindow(BaseModel):
+    start: str
+    end: str
+
+
+class MuhurtaOut(BaseModel):
+    date: str
+    sunrise: str
+    sunset: str
+    rahu_kalam: TimingWindow
+    yamaganda: TimingWindow
+    abhijit_muhurta: TimingWindow
+
+
+class MonthPanchangDay(BaseModel):
+    date: str
+    tithi: TithiOut
+    vara: str
+    nakshatra: str
+    nakshatra_pada: int
+    yoga: str
+    karana: str
+    festival: Optional[FestivalOut] = None
+
+
+class MonthPanchangOut(BaseModel):
+    year: int
+    month: int
+    days: List[MonthPanchangDay]
+
+
+# ---------- Forecast ----------
+
+class ForecastIn(BaseModel):
+    period: str  # "week" | "month"
+
+
+class ForecastOut(BaseModel):
+    chart_id: str
+    period: str  # "week" | "month"
+    overview: str
+    highlights: List[str]
+    caution: Optional[str] = None
+    transits_at_start: List[dict]
+    transits_at_end: List[dict]
+
+
+# ---------- Lucky Profile ----------
+
+class LuckyProfileOut(BaseModel):
+    lucky_numbers: List[int]
+    lucky_color: str
+    gemstone: dict
+
+
+# ---------- Sade Sati ----------
+
+class SadeSatiOut(BaseModel):
+    in_sade_sati: bool
+    phase: Optional[str] = None
+    natal_moon_sign: str
+    transiting_saturn_sign: str
+    as_of: str
+
+
+# ---------- Tarot ----------
+
+class TarotDrawIn(BaseModel):
+    question: Optional[str] = None
+    count: int = 1
+
+
+class TarotReadingOut(BaseModel):
+    reading_id: str
+    cards: List[dict]
+    question: Optional[str] = None
+    reading: str
+    created_at: str
+
+
+# ---------- Dream Interpretation ----------
+
+class DreamIn(BaseModel):
+    dream_description: str
+
+
+class DreamOut(BaseModel):
+    interpretation: str
+    key_symbols: List[str]
+
+
+# ---------- Kundali Milan (Matchmaking Report) ----------
+
+class KundaliMilanIn(BaseModel):
+    chart_id_a: str
+    chart_id_b: str
+
+
+class KundaliMilanOut(BaseModel):
+    manglik_a: dict
+    manglik_b: dict
+    ashta_koota: dict
+    report: dict
+
+
+# ---------- Baby Name Suggestions ----------
+
+class BabyNamesIn(BaseModel):
+    gender: Optional[str] = None
+    theme: Optional[str] = None
+
+
+class BabyNamesOut(BaseModel):
+    nakshatra: str
+    pada: int
+    syllable: str
+    names: List[dict]
+
+
+

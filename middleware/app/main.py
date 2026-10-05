@@ -16,7 +16,16 @@ from fastapi import FastAPI, UploadFile, File, Form, HTTPException, Depends, Que
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
-from . import config, db, chart_engine, report_generator, ocr_extractor, places, divisional, compatibility, daily_insight, numerology_engine, numerology_report
+from datetime import datetime, timezone
+import calendar
+
+from . import (
+    config, db, chart_engine, report_generator, ocr_extractor, places, divisional,
+    compatibility, daily_insight, numerology_engine, numerology_report, panchang_engine,
+    muhurta_engine, festivals_data, forecast_engine, lucky_profile, sade_sati_engine,
+    tarot_engine, tarot_report, dream_interpretation, kundali_milan_report, naming_engine,
+    baby_name_report
+)
 from .chat import router as chat_handler
 from .auth import get_current_user_id
 from .schemas import (
@@ -24,7 +33,9 @@ from .schemas import (
     ChatMessageIn, ChatMessageOut, TokenBalance, ErrorResponse,
     RegisterIn, RegisterOut, PlaceCandidate, PurchaseIn, PurchaseOut,
     CompatibilityIn, CompatibilityOut, DailyInsightOut, DivisionalChartOut,
-    NumerologyOut,
+    NumerologyOut, PanchangOut, MuhurtaOut, MonthPanchangOut, MonthPanchangDay,
+    ForecastOut, ForecastIn, LuckyProfileOut, SadeSatiOut, TarotDrawIn, TarotReadingOut,
+    DreamIn, DreamOut, KundaliMilanIn, KundaliMilanOut, BabyNamesIn, BabyNamesOut,
 )
 
 app = FastAPI(title="AstroGPT / KundaliGPT Middleware", version="2.0.0")
@@ -347,6 +358,280 @@ def get_numerology(chart_id: str, user_id: str = Depends(get_current_user_id)):
     if not data:
         raise HTTPException(status_code=404, detail={"code": "NUMEROLOGY_NOT_READY", "detail": "Numerology not generated yet"})
     return data
+
+
+# ---------- Panchang & Muhurta ----------
+
+@app.get("/panchang/{date}", response_model=PanchangOut)
+def get_panchang(
+    date: str,
+    lat: float = Query(28.6139, description="Latitude (default Delhi)"),
+    lon: float = Query(77.2090, description="Longitude (default Delhi)"),
+    _user_id: str = Depends(get_current_user_id),
+):
+    """GET /panchang/{date}?lat={lat}&lon={lon}
+    Computes Tithi, Vara, Nakshatra, Yoga, Karana and includes festival info if present."""
+    try:
+        dt = datetime.strptime(date, "%Y-%m-%d").replace(hour=6, minute=0, second=0, tzinfo=timezone.utc)
+    except ValueError:
+        raise HTTPException(status_code=400, detail={"code": "INVALID_DATE_FORMAT", "detail": "Date must be YYYY-MM-DD"})
+
+    p_data = panchang_engine.compute_panchang(dt)
+    p_data["date"] = date
+    festival = festivals_data.get_festival_for_date(date)
+    if festival:
+        p_data["festival"] = festival
+    return p_data
+
+
+@app.get("/muhurta/{date}", response_model=MuhurtaOut)
+def get_muhurta(
+    date: str,
+    lat: float = Query(28.6139, description="Latitude"),
+    lon: float = Query(77.2090, description="Longitude"),
+    _user_id: str = Depends(get_current_user_id),
+):
+    """GET /muhurta/{date}?lat={lat}&lon={lon}
+    Computes sunrise, sunset, Rahu Kalam, Yamaganda, Abhijit Muhurta timing windows."""
+    try:
+        dt = datetime.strptime(date, "%Y-%m-%d").replace(hour=0, minute=0, second=0, tzinfo=timezone.utc)
+    except ValueError:
+        raise HTTPException(status_code=400, detail={"code": "INVALID_DATE_FORMAT", "detail": "Date must be YYYY-MM-DD"})
+
+    return muhurta_engine.compute_muhurta(dt, lat, lon)
+
+
+@app.get("/panchang/month/{year}/{month}", response_model=MonthPanchangOut)
+def get_month_panchang(
+    year: int,
+    month: int,
+    lat: float = Query(28.6139),
+    lon: float = Query(77.2090),
+    _user_id: str = Depends(get_current_user_id),
+):
+    """GET /panchang/month/{year}/{month}?lat={lat}&lon={lon}
+    Returns complete Panchang + festival markers for every day in the given month."""
+    if month < 1 or month > 12:
+        raise HTTPException(status_code=400, detail={"code": "INVALID_MONTH", "detail": "Month must be 1-12"})
+    if year < 1900 or year > 2100:
+        raise HTTPException(status_code=400, detail={"code": "INVALID_YEAR", "detail": "Invalid year range"})
+
+    num_days = calendar.monthrange(year, month)[1]
+    days_data = []
+
+    for day in range(1, num_days + 1):
+        date_str = f"{year:04d}-{month:02d}-{day:02d}"
+        dt = datetime(year, month, day, 6, 0, 0, tzinfo=timezone.utc)
+        p_data = panchang_engine.compute_panchang(dt)
+        p_data["date"] = date_str
+        festival = festivals_data.get_festival_for_date(date_str)
+        if festival:
+            p_data["festival"] = festival
+        days_data.append(p_data)
+
+    return {"year": year, "month": month, "days": days_data}
+
+
+# ---------- Forecast (Weekly / Monthly) ----------
+
+@app.post("/kundali/{chart_id}/forecast", response_model=ForecastOut, responses={402: {"model": ErrorResponse}})
+def get_forecast(
+    chart_id: str,
+    period: str = Query("week", description="week or month"),
+    user_id: str = Depends(get_current_user_id),
+):
+    """POST /kundali/{chart_id}/forecast?period=week|month
+    Generates a weekly or monthly transit forecast based on natal chart & active dasha."""
+    _require_chart_owner(chart_id, user_id)
+    chart = db.get_chart(chart_id)
+    if not chart:
+        raise HTTPException(status_code=404, detail={"code": "CHART_NOT_FOUND", "detail": "Chart not found"})
+
+    if period not in ("week", "month"):
+        raise HTTPException(status_code=400, detail={"code": "INVALID_PERIOD", "detail": "Period must be 'week' or 'month'"})
+
+    try:
+        db.deduct_tokens(user_id, "analysis", config.TOKEN_COST["analysis"])
+    except ValueError:
+        return _insufficient_tokens_response(user_id, "analysis")
+
+    try:
+        forecast = forecast_engine.generate_forecast(chart, period=period)
+        return ForecastOut(chart_id=chart_id, period=period, **forecast)
+    except Exception as e:
+        import traceback
+        print("EXACT ERROR IN /forecast:", config.sanitize_error(traceback.format_exc()))
+        raise HTTPException(status_code=500, detail={"code": "FORECAST_ERROR", "detail": "Failed to generate forecast"})
+
+
+# ---------- Lucky Profile ----------
+
+@app.get("/kundali/{chart_id}/lucky", response_model=LuckyProfileOut)
+def get_lucky_profile(chart_id: str, user_id: str = Depends(get_current_user_id)):
+    """GET /kundali/{chart_id}/lucky — 0 tokens.
+    Requires numerology to exist for this chart first."""
+    _require_chart_owner(chart_id, user_id)
+    chart = db.get_chart(chart_id)
+    if not chart:
+        raise HTTPException(status_code=404, detail={"code": "CHART_NOT_FOUND", "detail": "Chart not found"})
+
+    num_data = db.get_numerology(chart_id)
+    if not num_data:
+        raise HTTPException(
+            status_code=404,
+            detail={"code": "NUMEROLOGY_NOT_READY", "detail": "Generate numerology for this chart first"}
+        )
+
+    life_path = num_data["numbers"]["life_path_number"]
+    asc_sign = chart.get("ascendant_sign") or chart.get("ascendant") or "Sagittarius"
+    res = lucky_profile.get_lucky_profile(life_path, asc_sign)
+    return LuckyProfileOut(**res)
+
+
+# ---------- Sade Sati ----------
+
+@app.get("/kundali/{chart_id}/sade-sati", response_model=SadeSatiOut)
+def get_sade_sati(chart_id: str, user_id: str = Depends(get_current_user_id)):
+    """GET /kundali/{chart_id}/sade-sati — 0 tokens, pure math."""
+    _require_chart_owner(chart_id, user_id)
+    chart = db.get_chart(chart_id)
+    if not chart:
+        raise HTTPException(status_code=404, detail={"code": "CHART_NOT_FOUND", "detail": "Chart not found"})
+
+    moon = next((p for p in chart.get("planets", []) if p["planet"] == "Moon"), None)
+    if not moon:
+        raise HTTPException(status_code=400, detail={"code": "MISSING_MOON_SIGN", "detail": "Moon sign not found in chart"})
+
+    res = sade_sati_engine.get_sade_sati_status(moon["sign"])
+    return SadeSatiOut(**res)
+
+
+# ---------- Tarot Draw & History ----------
+
+@app.post("/kundali/{chart_id}/tarot/draw", response_model=TarotReadingOut, responses={402: {"model": ErrorResponse}})
+def draw_tarot(chart_id: str, payload: TarotDrawIn, user_id: str = Depends(get_current_user_id)):
+    """POST /kundali/{chart_id}/tarot/draw — 5 tokens, AI reading + DB storage."""
+    _require_chart_owner(chart_id, user_id)
+    chart = db.get_chart(chart_id)
+    if not chart:
+        raise HTTPException(status_code=404, detail={"code": "CHART_NOT_FOUND", "detail": "Chart not found"})
+
+    cost = config.TOKEN_COST.get("tarot", 5)
+    try:
+        db.deduct_tokens(user_id, "tarot", cost)
+    except ValueError:
+        return _insufficient_tokens_response(user_id, "tarot")
+
+    count = max(1, min(payload.count, 5))
+    cards = tarot_engine.draw_cards(count)
+    reading_text = tarot_report.generate_tarot_reading(cards, payload.question)
+    reading_id = db.save_tarot_reading(chart_id, cards, payload.question, reading_text)
+
+    return TarotReadingOut(
+        reading_id=reading_id,
+        cards=cards,
+        question=payload.question,
+        reading=reading_text,
+        created_at=datetime.now(timezone.utc).isoformat(),
+    )
+
+
+@app.get("/kundali/{chart_id}/tarot/history", response_model=list[TarotReadingOut])
+def get_tarot_history(chart_id: str, user_id: str = Depends(get_current_user_id)):
+    """GET /kundali/{chart_id}/tarot/history — 0 tokens, lists past readings."""
+    _require_chart_owner(chart_id, user_id)
+    return db.list_tarot_readings(chart_id)
+
+
+# ---------- Dream Interpretation ----------
+
+@app.post("/dream/interpret", response_model=DreamOut, responses={402: {"model": ErrorResponse}})
+def interpret_dream(payload: DreamIn, user_id: str = Depends(get_current_user_id)):
+    """POST /dream/interpret — 2 tokens, tied to user_id."""
+    cost = config.TOKEN_COST.get("dream", 2)
+    try:
+        db.deduct_tokens(user_id, "dream", cost)
+    except ValueError:
+        return _insufficient_tokens_response(user_id, "dream")
+
+    try:
+        res = dream_interpretation.interpret_dream(payload.dream_description)
+        return DreamOut(**res)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail={"code": "INVALID_DREAM_INPUT", "detail": str(e)})
+
+
+# ---------- Kundali Milan (Matchmaking Report) ----------
+
+@app.post("/kundali/milan", response_model=KundaliMilanOut, responses={402: {"model": ErrorResponse}})
+def kundali_milan(payload: KundaliMilanIn, user_id: str = Depends(get_current_user_id)):
+    """POST /kundali/milan — 5 tokens, requires ownership of chart_id_a and chart_id_b."""
+    _require_chart_owner(payload.chart_id_a, user_id)
+    _require_chart_owner(payload.chart_id_b, user_id)
+
+    chart_a = db.get_chart(payload.chart_id_a)
+    chart_b = db.get_chart(payload.chart_id_b)
+    if not chart_a or not chart_b:
+        raise HTTPException(status_code=404, detail={"code": "CHART_NOT_FOUND", "detail": "Chart not found"})
+
+    cost = config.TOKEN_COST.get("milan", 5)
+    try:
+        db.deduct_tokens(user_id, "milan", cost)
+    except ValueError:
+        return _insufficient_tokens_response(user_id, "milan")
+
+    manglik_a = compatibility.check_manglik(chart_a)
+    manglik_b = compatibility.check_manglik(chart_b)
+
+    moon_a = next(p for p in chart_a["planets"] if p["planet"] == "Moon")
+    moon_b = next(p for p in chart_b["planets"] if p["planet"] == "Moon")
+
+    ashta_koota = compatibility.compute_ashta_koota(
+        moon_a["nakshatra"], moon_a["sign"], moon_b["nakshatra"], moon_b["sign"]
+    )
+
+    milan_report = kundali_milan_report.generate_milan_report(
+        name_a=chart_a.get("name", "Person A"),
+        name_b=chart_b.get("name", "Person B"),
+        manglik_a=manglik_a,
+        manglik_b=manglik_b,
+        ashta_koota=ashta_koota,
+    )
+
+    return KundaliMilanOut(
+        manglik_a=manglik_a,
+        manglik_b=manglik_b,
+        ashta_koota=ashta_koota,
+        report=milan_report,
+    )
+
+
+# ---------- Baby Name Suggestions ----------
+
+@app.post("/kundali/{chart_id}/baby-names", response_model=BabyNamesOut, responses={402: {"model": ErrorResponse}})
+def get_baby_names(chart_id: str, payload: BabyNamesIn, user_id: str = Depends(get_current_user_id)):
+    """POST /kundali/{chart_id}/baby-names — 5 tokens."""
+    _require_chart_owner(chart_id, user_id)
+    chart = db.get_chart(chart_id)
+    if not chart:
+        raise HTTPException(status_code=404, detail={"code": "CHART_NOT_FOUND", "detail": "Chart not found"})
+
+    cost = config.TOKEN_COST.get("baby_names", 5)
+    try:
+        db.deduct_tokens(user_id, "baby_names", cost)
+    except ValueError:
+        return _insufficient_tokens_response(user_id, "baby_names")
+
+    syl_data = naming_engine.get_naming_syllable_from_chart(chart)
+    names = baby_name_report.suggest_names(syl_data["syllable"], gender=payload.gender, theme=payload.theme)
+
+    return BabyNamesOut(
+        nakshatra=syl_data["nakshatra"],
+        pada=syl_data["pada"],
+        syllable=syl_data["syllable"],
+        names=names,
+    )
+
 
 
 # ---------- /ai/* aliases ----------
